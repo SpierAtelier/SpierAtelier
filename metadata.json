@@ -1,0 +1,8 @@
+{
+  "name": "Spier Atelier",
+  "description": "Website Portofolio & Estimator Harga Desain Arsitektur beserta Visualisasi Interaktif 3D Spier Atelier - Jakarta, Indonesia.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

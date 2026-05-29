@@ -1,0 +1,42 @@
+{
+  "entities": {
+    "ClientUser": {
+      "title": "ClientUser",
+      "description": "Information about a Spier Atelier registered client.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Payment": {
+      "title": "Payment",
+      "description": "A payment history record for premium design packages.",
+      "type": "object",
+      "properties": {
+        "paymentId": { "type": "string" },
+        "userId": { "type": "string" },
+        "planName": { "type": "string" },
+        "terminLabel": { "type": "string" },
+        "amount": { "type": "number" },
+        "method": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["paymentId", "userId", "planName", "amount", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "ClientUser",
+      "description": "User profile document."
+    },
+    "/payments/{paymentId}": {
+      "schema": "Payment",
+      "description": "Transactions collection secured by owner client."
+    }
+  }
+}

@@ -1,0 +1,71 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Global Safety Net (Strict Default-Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // ClientUser Validation Function (Pillar 2: Validation Blueprints / Anti-Update-Gap)
+    function isValidClientUser(data) {
+      return data.uid is string && data.uid.size() <= 128 && data.uid == request.auth.uid
+        && data.email is string && data.email.size() <= 200
+        && (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 200));
+    }
+
+    // Payment Validation Function
+    function isValidPayment(data) {
+      return data.paymentId is string && data.paymentId.size() <= 128
+        && data.userId is string && data.userId == request.auth.uid
+        && data.planName is string && data.planName.size() <= 100
+        && data.terminLabel is string && data.terminLabel.size() <= 200
+        && data.amount is int && data.amount > 0
+        && data.method is string && data.method.size() <= 50
+        && data.status is string && data.status.size() <= 50
+        && data.createdAt is string && data.createdAt.size() <= 200;
+    }
+
+    // ClientUser Match (PII Isolation & Split-access logic)
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidClientUser(incoming());
+      allow update: if isOwner(userId) && isValidClientUser(incoming())
+        && incoming().uid == existing().uid
+        && incoming().email == existing().email;
+      allow delete, list: if false; // Never list user documents or delete profile structures arbitrarily
+    }
+
+    // Payments Match (Pillar 8: Query Enforcer to prevent query scraping leaking)
+    match /payments/{paymentId} {
+      allow get: if isSignedIn() && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(paymentId) && isValidPayment(incoming());
+      allow update: if isSignedIn() && existing().userId == request.auth.uid && isValidPayment(incoming())
+        && incoming().userId == existing().userId
+        && incoming().paymentId == existing().paymentId;
+      allow delete: if false; // Complete ledger safety: Clients cannot destruct transaction evidence
+    }
+  }
+}
